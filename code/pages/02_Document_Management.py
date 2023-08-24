@@ -6,7 +6,7 @@ import streamlit.components.v1 as components
 from urllib import parse
 
 def delete_embeddings_of_file(file_to_delete):
-    # Query RediSearch to get all the embeddings - lazy loading
+    # RediSearchをクエリしてすべての埋め込みを取得 - 遅延ロード
     if 'data_files_embeddings' not in st.session_state:
         st.session_state['data_files_embeddings'] = llm_helper.get_all_documents(k=1000)
 
@@ -16,44 +16,45 @@ def delete_embeddings_of_file(file_to_delete):
     for converted_file_extension in ['.txt']:
         file_to_delete = 'converted/' + file_to_delete + converted_file_extension
 
+        # 削除する埋め込みを取得
         embeddings_to_delete = st.session_state['data_files_embeddings'][st.session_state['data_files_embeddings']['filename'] == file_to_delete]['key'].tolist()
         embeddings_to_delete = list(map(lambda x: f"{x}", embeddings_to_delete))
         if len(embeddings_to_delete) > 0:
             llm_helper.vector_store.delete_keys(embeddings_to_delete)
-            # remove all embeddings lines for the filename from session state
+            # セッションステートから削除
             st.session_state['data_files_embeddings'] = st.session_state['data_files_embeddings'].drop(st.session_state['data_files_embeddings'][st.session_state['data_files_embeddings']['filename'] == file_to_delete].index)
 
 def delete_file_and_embeddings(filename=''):
-    # Query RediSearch to get all the embeddings - lazy loading
+    # RediSearchをクエリしてすべての埋め込みを取得 - 遅延ロード
     if 'data_files_embeddings' not in st.session_state:
         st.session_state['data_files_embeddings'] = llm_helper.get_all_documents(k=1000)
 
     if filename == '':
-        filename = st.session_state['file_and_embeddings_to_drop'] # get the current selected filename
+        filename = st.session_state['file_and_embeddings_to_drop']
     
     file_dict = next((d for d in st.session_state['data_files'] if d['filename'] == filename), None)
 
     if len(file_dict) > 0:
-        # delete source file
+        # 元のファイルを削除
         source_file = file_dict['filename']
         try:
             llm_helper.blob_client.delete_file(source_file)
         except Exception as e:
-            st.error(f"Error deleting file: {source_file} - {e}")
+            st.error(f"ファイルの削除エラー: {source_file} - {e}")
 
-        # delete converted file
+        # 変換済みファイルを削除
         if file_dict['converted']:
             converted_file = 'converted/' + file_dict['filename'] + '.txt'
             try:
                 llm_helper.blob_client.delete_file(converted_file)
             except Exception as e:
-                st.error(f"Error deleting file : {converted_file} - {e}")
+                st.error(f"ファイルの削除エラー: {converted_file} - {e}")
 
-        # delete embeddings
+        # 埋め込みを削除
         if file_dict['embeddings_added']:
             delete_embeddings_of_file(parse.quote(filename))
     
-    # update the list of filenames to remove the deleted filename
+    # ファイル名リストを更新
     st.session_state['data_files'] = [d for d in st.session_state['data_files'] if d['filename'] != '{filename}']
 
 
@@ -63,17 +64,15 @@ def delete_all_files_and_embeddings():
         delete_file_and_embeddings(filename_dict['filename'])
 
 try:
-    # Set page layout to wide screen and menu item
-    menu_items = {
-	'Get help': None,
-	'Report a bug': None,
-	'About': '''
-	 ## Embeddings App
+    st.set_page_config(layout="wide", menu_items={
+        'ヘルプを得る': None,
+        'バグを報告する': None,
+        'アバウト': '''
+         ## 埋め込みアプリ
 
-	Document Reader Sample Demo.
-	'''
-    }
-    st.set_page_config(layout="wide", menu_items=menu_items)
+        ドキュメントリーダーサンプルデモ。
+        '''
+    })
 
     hide_streamlit_style = """
                 <style>
@@ -85,12 +84,11 @@ try:
 
     llm_helper = LLMHelper()
 
-
     st.session_state['data_files'] = llm_helper.blob_client.get_all_files()
     st.session_state['data_files_embeddings'] = llm_helper.get_all_documents(k=1000)
 
     if len(st.session_state['data_files']) == 0:
-        st.warning("No files found. Go to the 'Add Document' tab to insert your docs.")
+        st.warning("ファイルが見つかりません。'ドキュメントを追加'タブでドキュメントを追加してください。")
 
     else:
         st.dataframe(st.session_state['data_files'], use_container_width=True)
@@ -100,15 +98,15 @@ try:
         st.text("")
 
         filenames_list = [d['filename'] for d in st.session_state['data_files']]
-        st.selectbox("Select filename to delete", filenames_list, key="file_and_embeddings_to_drop")
+        st.selectbox("削除するファイル名を選択", filenames_list, key="file_and_embeddings_to_drop")
          
         st.text("")
-        st.button("Delete file and its embeddings", on_click=delete_file_and_embeddings)
+        st.button("ファイルとその埋め込みを削除", on_click=delete_file_and_embeddings)
         st.text("")
         st.text("")
 
         if len(st.session_state['data_files']) > 1:
-            st.button("Delete all files (with their embeddings)", type="secondary", on_click=delete_all_files_and_embeddings, args=None, kwargs=None)
+            st.button("すべてのファイルを削除（埋め込みも含む）", type="secondary", on_click=delete_all_files_and_embeddings, args=None, kwargs=None)
 
 except Exception as e:
     st.error(traceback.format_exc())

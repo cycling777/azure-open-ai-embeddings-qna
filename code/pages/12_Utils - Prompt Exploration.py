@@ -5,10 +5,10 @@ from utilities.helper import LLMHelper
 
 def get_prompt():
     return f"{st.session_state['doc_text']}\n{st.session_state['input_prompt']}"
-   
+
 def customcompletion():
     response = llm_helper.get_completion(get_prompt())
-    st.session_state['prompt_result']= response.encode().decode()
+    st.session_state['prompt_result'] = response.encode().decode()
 
 def process_all(data):
     llm_helper.vector_store.delete_prompt_results('prompt*')
@@ -20,14 +20,14 @@ def process_all(data):
     st.session_state['data_processed'] = llm_helper.vector_store.get_prompt_results().to_csv(index=False)
 
 try:
-    # Set page layout to wide screen and menu item
+    # 画面レイアウトとメニューアイテムの設定
     menu_items = {
-	'Get help': None,
-	'Report a bug': None,
-	'About': '''
-	 ## Embeddings App
-	 Embedding testing application.
-	'''
+        'ヘルプを得る': None,
+        'バグを報告': None,
+        'このアプリについて': '''
+         ## 埋め込みアプリ
+         埋め込みテストアプリケーション。
+        '''
     }
     st.set_page_config(layout="wide", menu_items=menu_items)
 
@@ -36,34 +36,34 @@ try:
 
     llm_helper = LLMHelper()
 
-    # Query RediSearch to get all the embeddings
+    # RediSearchからすべての埋め込みを取得
     data = llm_helper.get_all_documents(k=1000)
 
     if len(data) == 0:
-        st.warning("No embeddings found. Go to the 'Add Document' tab to insert your docs.")
+        st.warning("埋め込みが見つかりません。'文書を追加'タブで文書を挿入してください。")
     else:
         st.dataframe(data, use_container_width=True)
 
-        # displaying a box for a custom prompt
-        st.text_area(label="Document", height=400, key="doc_text")
-        st.text_area(label="Prompt", height=100, key="input_prompt")
-        st.button(label="Execute tasks", on_click=customcompletion)
-        # displaying the summary
+        # カスタムプロンプト用のテキストエリアを表示
+        st.text_area(label="文書", height=400, key="doc_text")
+        st.text_area(label="プロンプト", height=100, key="input_prompt")
+        st.button(label="タスクを実行", on_click=customcompletion)
+
         result = ""
         if 'prompt_result' in st.session_state:
             result = st.session_state['prompt_result']
-            st.text_area(label="Result", value=result, height=400)
+            st.text_area(label="結果", value=result, height=400)
 
         cols = st.columns([1,1,1,2])
         with cols[1]:
-            st.multiselect("Select documents", sorted(set(data.filename.tolist())), key="selected_docs")
+            st.multiselect("文書を選択", sorted(set(data.filename.tolist())), key="selected_docs")
         with cols[2]:
             st.text("-")
-            st.button("Execute task on docs", on_click=process_all, args=(data,)) 
+            st.button("文書でタスクを実行", on_click=process_all, args=(data,)) 
         with cols[3]:
             st.text("-")
             download_data = st.session_state['data_processed'] if st.session_state['data_processed'] is not None else ""
-            st.download_button(label="Download results", data=download_data, file_name="results.csv", mime="text/csv", disabled=st.session_state['data_processed'] is None)
+            st.download_button(label="結果をダウンロード", data=download_data, file_name="results.csv", mime="text/csv", disabled=st.session_state['data_processed'] is None)
 
 except Exception as e:
     st.error(traceback.format_exc())

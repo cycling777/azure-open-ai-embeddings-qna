@@ -1,6 +1,9 @@
 from dotenv import load_dotenv
 load_dotenv()
 
+from dotenv import load_dotenv
+load_dotenv()
+
 import streamlit as st
 import os
 import traceback
@@ -10,41 +13,40 @@ import regex as re
 import logging
 logger = logging.getLogger('azure.core.pipeline.policies.http_logging_policy').setLevel(logging.WARNING)
 
+# 部署が正しく動作しているかチェックする関数
 def check_deployment():
-    # Check if the deployment is working
-    #\ 1. Check if the llm is working
     try:
         llm_helper = LLMHelper()
-        llm_helper.get_completion("Generate a joke!")
-        st.success("LLM is working!")
+        llm_helper.get_completion("ジョークを作成してください！")
+        st.success("LLMは正常に動作しています！")
     except Exception as e:
-        st.error(f"""LLM is not working.  
-            Please check you have a deployment name {llm_helper.deployment_name} in your Azure OpenAI resource {llm_helper.api_base}.  
-            If you are using an Instructions based deployment (text-davinci-003), please check you have an environment variable OPENAI_DEPLOYMENT_TYPE=Text or delete the environment variable OPENAI_DEPLOYMENT_TYPE.  
-            If you are using a Chat based deployment (gpt-35-turbo or gpt-4-32k or gpt-4), please check you have an environment variable OPENAI_DEPLOYMENT_TYPE=Chat.  
-            Then restart your application.
+        st.error(f"""LLMが動作していません。
+            Azure OpenAIリソースの{llm_helper.api_base}にデプロイメント名{llm_helper.deployment_name}が存在することを確認してください。
+            環境変数OPENAI_DEPLOYMENT_TYPEが正しいかどうかも確認してください。
+            アプリケーションを再起動してください。
             """)
         st.error(traceback.format_exc())
     #\ 2. Check if the embedding is working
     try:
         llm_helper = LLMHelper()
-        llm_helper.embeddings.embed_documents(texts=["This is a test"])
-        st.success("Embedding is working!")
+        llm_helper.embeddings.embed_documents(texts=["これはテストです"])
+        st.success("埋め込みモデルは正常に動作しています！")
     except Exception as e:
-        st.error(f"""Embedding model is not working.  
-            Please check you have a deployment named "text-embedding-ada-002" for "text-embedding-ada-002" model in your Azure OpenAI resource {llm_helper.api_base}.  
-            Then restart your application.
+        st.error(f"""埋め込みモデルが動作していません。
+            Azure OpenAIリソースの{llm_helper.api_base}にデプロイメント名"text-embedding-ada-002"が存在するか確認してください。
+            その後、アプリケーションを再起動してください。
             """)
         st.error(traceback.format_exc())
+
     #\ 3. Check if the translation is working
     try:
         llm_helper = LLMHelper()
-        llm_helper.translator.translate("This is a test", "it")
-        st.success("Translation is working!")
+        llm_helper.translator.translate("これはテストです", "it")
+        st.success("翻訳が正常に動作しています！")
     except Exception as e:
-        st.error(f"""Translation model is not working.  
-            Please check your Azure Translator key in the App Settings.  
-            Then restart your application.  
+        st.error(f"""翻訳モデルが動作していません。
+            アプリ設定でAzure Translatorのキーが正しく設定されているか確認してください。
+            その後、アプリケーションを再起動してください。
             """)
         st.error(traceback.format_exc())
     #\ 4. Check if the Redis is working with previous version of data
@@ -52,47 +54,48 @@ def check_deployment():
         llm_helper = LLMHelper()
         if llm_helper.vector_store_type != "AzureSearch":
             if llm_helper.vector_store.check_existing_index("embeddings-index"):
-                st.warning("""Seems like you're using a Redis with an old data structure.  
-                If you want to use the new data structure, you can start using the app and go to "Add Document" -> "Add documents in Batch" and click on "Convert all files and add embeddings" to reprocess your documents.  
-                To remove this working, please delete the index "embeddings-index" from your Redis.  
-                If you prefer to use the old data structure, please change your Web App container image to point to the docker image: fruocco/oai-embeddings:2023-03-27_25. 
-                """)
+                st.warning("""Redisが旧バージョンのデータ構造を使用しているようです。
+                            新しいデータ構造を使用したい場合は、アプリを起動し、「ドキュメントを追加」->「一括でドキュメントを追加」に進み、「すべてのファイルを変換して埋め込みを追加」をクリックしてドキュメントを再処理してください。
+                            この警告を消すには、Redisから「embeddings-index」というインデックスを削除してください。
+                            旧バージョンのデータ構造を使用する場合は、Webアプリのコンテナイメージをfruocco/oai-embeddings:2023-03-27_25に変更してください。
+                            """)
             else:
-                st.success("Redis is working!")
+                st.success("Redisは正常に動作しています！")
         else:
             try:
                 llm_helper.vector_store.index_exists()
-                st.success("Azure Cognitive Search is working!")
+                st.success("Azure Cognitive Searchが正常に動作しています！")
             except Exception as e:
-                st.error("""Azure Cognitive Search is not working.  
-                    Please check your Azure Cognitive Search service name and service key in the App Settings.  
-                    Then restart your application.  
-                    """)
+                st.error("""Azure Cognitive Searchが動作していません。
+                            アプリ設定でAzure Cognitive Searchのサービス名とサービスキーが正しく設定されているか確認してください。
+                            その後、アプリケーションを再起動してください。
+                            """)
                 st.error(traceback.format_exc())
     except Exception as e:
-        st.error(f"""Redis is not working. 
-            Please check your Redis connection string in the App Settings.  
-            Then restart your application.
-            """)
+        st.error(f"""Redisが動作していません。
+                    アプリ設定でRedisの接続文字列が正しく設定されているか確認してください。
+                    その後、アプリケーションを再起動してください。
+                    """)
         st.error(traceback.format_exc())
 
 
 def check_variables_in_prompt():
-    # Check if "summaries" is present in the string custom_prompt
+    # "summaries" が custom_prompt 文字列に含まれているか確認
     if "{summaries}" not in st.session_state.custom_prompt:
-        st.warning("""Your custom prompt doesn't contain the variable "{summaries}".  
-        This variable is used to add the content of the documents retrieved from the VectorStore to the prompt.  
-        Please add it to your custom prompt to use the app.  
-        Reverting to default prompt.
+        st.warning("""あなたのカスタムプロンプトには変数 "{summaries}" が含まれていません。
+        この変数は、VectorStoreから取得した文書の内容をプロンプトに追加するために使用されます。
+        アプリを使用するには、カスタムプロンプトにこれを追加してください。
+        デフォルトのプロンプトに戻します。
         """)
         st.session_state.custom_prompt = ""
     if "{question}" not in st.session_state.custom_prompt:
-        st.warning("""Your custom prompt doesn't contain the variable "{question}".  
-        This variable is used to add the user's question to the prompt.  
-        Please add it to your custom prompt to use the app.  
-        Reverting to default prompt.  
+        st.warning("""あなたのカスタムプロンプトには変数 "{question}" が含まれていません。
+        この変数は、ユーザーの質問をプロンプトに追加するために使用されます。
+        アプリを使用するには、カスタムプロンプトにこれを追加してください。
+        デフォルトのプロンプトに戻します。
         """)
         st.session_state.custom_prompt = ""
+
     
 
  # Callback to assign the follow-up question is selected by the user
@@ -133,31 +136,31 @@ try:
     if 'askedquestion' not in st.session_state:
         st.session_state.askedquestion = default_question
 
-    # Set page layout to wide screen and menu item
+    # ページレイアウトをワイドスクリーンに設定し、メニューアイテムを追加
     menu_items = {
-	'Get help': None,
-	'Report a bug': None,
-	'About': '''
-	 ## Embeddings App
-	 Embedding testing application.
-	'''
+        'ヘルプを得る': None,
+        'バグを報告': None,
+        'このアプリについて': '''
+        ## エンベディングアプリ
+        エンベディングテストアプリケーション。
+        '''
     }
     st.set_page_config(layout="wide", menu_items=menu_items)
 
     llm_helper = LLMHelper(custom_prompt=st.session_state.custom_prompt, temperature=st.session_state.custom_temperature)
 
-    # Get available languages for translation
+    # 翻訳のための利用可能な言語を取得
     available_languages = get_languages()
 
-    # Custom prompt variables
-    custom_prompt_placeholder = """{summaries}  
-    Please reply to the question using only the text above.  
-    Question: {question}  
-    Answer:"""
-    custom_prompt_help = """You can configure a custom prompt by adding the variables {summaries} and {question} to the prompt.  
-    {summaries} will be replaced with the content of the documents retrieved from the VectorStore.  
-    {question} will be replaced with the user's question.
-        """
+    # カスタムプロンプト変数
+    custom_prompt_placeholder = """{summaries}
+    上記のテキストのみを使用して、質問に回答してください。
+    質問：{question}
+    回答："""
+    custom_prompt_help = """{summaries}と{question}という変数をプロンプトに追加することで、カスタムプロンプトを設定できます。
+    {summaries}は、VectorStoreから取得した文書の内容に置き換えられます。
+    {question}は、ユーザーの質問に置き換えられます。
+    """
 
     col1, col2, col3 = st.columns([1,2,1])
     with col1:
@@ -165,20 +168,14 @@ try:
 
     col1, col2, col3 = st.columns([2,2,2])
     with col1:
-        st.button("Check deployment", on_click=check_deployment)
+        st.button("デプロイメントを確認", on_click=check_deployment)
     with col3:
-        with st.expander("Settings"):
-            # model = st.selectbox(
-            #     "OpenAI GPT-3 Model",
-            #     [os.environ['OPENAI_ENGINE']]
-            # )
-            # st.tokens_response = st.slider("Tokens response length", 100, 500, 400)
-            st.slider("Temperature", min_value=0.0, max_value=1.0, step=0.1, key='custom_temperature')
-            st.text_area("Custom Prompt", key='custom_prompt', on_change=check_variables_in_prompt, placeholder= custom_prompt_placeholder,help=custom_prompt_help, height=150)
-            st.selectbox("Language", [None] + list(available_languages.keys()), key='translation_language')
+        with st.expander("設定"):
+            st.slider("temperature", min_value=0.0, max_value=1.0, step=0.1, key='custom_temperature')
+            st.text_area("カスタムプロンプト", key='custom_prompt', on_change=check_variables_in_prompt, placeholder=custom_prompt_placeholder, help=custom_prompt_help, height=150)
+            st.selectbox("言語", [None] + list(available_languages.keys()), key='translation_language')
 
-
-    question = st.text_input("Azure OpenAI Semantic Answer", value=st.session_state['askedquestion'], key="input"+str(st.session_state ['input_message_key']), on_change=questionAsked)
+    question = st.text_input("Azure OpenAI Semantic Answer", value=st.session_state['askedquestion'], key="input"+str(st.session_state['input_message_key']), on_change=questionAsked)
 
     # Answer the question if any
     if st.session_state.askedquestion != '':

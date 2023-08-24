@@ -16,20 +16,20 @@ def customcompletion():
     st.session_state['conv_result'] = response.encode().decode()
 
 try:
-    # Set page layout to wide screen and menu item
+    # 画面レイアウトとメニューアイテムの設定
     menu_items = {
-    'Get help': None,
-    'Report a bug': None,
-    'About': '''
-     ## Embeddings App
-     Embedding testing application.
-    '''
+        'ヘルプを得る': None,
+        'バグを報告': None,
+        'このアプリについて': '''
+         ## 埋め込みアプリ
+         埋め込みテストアプリケーション。
+        '''
     }
     st.set_page_config(layout="wide", menu_items=menu_items)
 
     llm_helper = LLMHelper()
 
-    st.markdown("## Conversation data extraction")
+    st.markdown("## 会話データの抽出")
 
     conversation_prompt = """   User: Hi there, I’m off between August 25 and September 11. I saved up 4000 for a nice trip. If I flew out from San Francisco, what are your suggestions for where I can go?
         Agent: For that budget you could travel to cities in the US, Mexico, Brazil, Italy or Japan. Any preferences?
@@ -64,14 +64,15 @@ try:
         Answer in JSON machine-readable format, using the keys from above.
         Format the ouput as JSON object called "results". Pretty print the JSON and make sure that is properly closed at the end."""
 
-    # displaying a box for a custom prompt
-    st.session_state['customtext'] = st.text_area(label="Prompt",value=conversation_prompt, height=400)
-    st.button(label="Execute tasks", on_click=customcompletion)
-    # displaying the summary
+    # カスタムプロンプト用のテキストエリアを表示
+    st.session_state['customtext'] = st.text_area(label="プロンプト", value=conversation_prompt, height=400)
+    st.button(label="タスクを実行", on_click=customcompletion)
+
+    # 結果を表示
     result = ""
     if 'conv_result' in st.session_state:
         result = st.session_state['conv_result']
-    st.text_area(label="OpenAI result", value=result, height=200)
+    st.text_area(label="OpenAIの結果", value=result, height=200)
 
 except Exception as e:
     st.error(traceback.format_exc())
